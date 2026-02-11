@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Late Call Entry Form</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        h1 { text-align: center; }
+        label { font-weight: bold; }
+        input, select { width: 100%; padding: 8px; margin-top: 4px; margin-bottom: 12px; box-sizing: border-box; }
+        input[type="submit"], button { background-color: #4CAF50; color: white; border: none; cursor: pointer; font-size: 16px; padding: 10px 20px; }
+        input[type="submit"]:hover, button:hover { background-color: #45a049; }
+        #managerSection { display: none; margin-top: 30px; }
+        .status-pending { background-color: orange; color: white; padding: 5px 10px; border: none; cursor: pointer; }
+        .status-completed { background-color: green; color: white; padding: 5px 10px; border: none; cursor: default; }
+    </style>
+</head>
+<body>
+
+<h1>Late Call Entry Form</h1>
+
+<!-- Form Section -->
+<form id="lateCallForm">
+    <label for="date">Date:</label>
+    <input type="date" id="date" name="date" required>
+
+    <label for="name">Name:</label>
+    <input type="text" id="name" name="name" required>
+
+    <label for="corp">Corp Number:</label>
+    <input type="text" id="corp" name="corp" required>
+
+    <label for="hub">HUB:</label>
+    <select id="hub" name="hub" required>
+        <option value="">-- Select HUB --</option>
+        <option value="Hub 1">Hub 1</option>
+        <option value="Hub 2">Hub 2</option>
+        <option value="Hub 3">Hub 3</option>
+        <option value="Hub 4">Hub 4</option>
+        <option value="Hub 5">Hub 5</option>
+        <option value="Hub 6">Hub 6</option>
+        <option value="Hub 7">Hub 7</option>
+        <option value="Hub 8">Hub 8</option>
+        <option value="Events">Events</option>
+        <option value="SAS">SAS</option>
+    </select>
+
+    <label for="unit">Unit:</label>
+    <input type="text" id="unit" name="unit" required>
+
+    <label for="shift">Shift:</label>
+    <select id="shift" name="shift" required>
+        <option value="">-- Select Shift --</option>
+        <option value="Day">Day</option>
+        <option value="Peak">Peak</option>
+        <option value="Night">Night</option>
+    </select>
+
+    <label for="trip" id="tripLabel">Trip Number:</label>
+    <input type="number" id="trip" name="trip" min="1" required>
+
+    <label for="hours">Number of Hours:</label>
+    <input type="number" id="hours" name="hours" min="0" step="0.1" required>
+
+    <input type="submit" value="Submit">
+</form>
+
+<!-- Manager Access Button -->
+<div style="text-align:center; margin-top:20px;">
+    <button onclick="managerLogin()">Manager Access</button>
+</div>
+
+<!-- Manager Section -->
+<div id="managerSection">
+    <h2>Pending Requests</h2>
+    <table id="requestsTable">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Name</th>
+                <th>Corp</th>
+                <th>HUB</th>
+                <th>Unit</th>
+                <th>Shift</th>
+                <th>Trip Number</th>
+                <th>Hours</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<script>
+const form = document.getElementById('lateCallForm');
+const managerSection = document.getElementById('managerSection');
+const hubSelect = document.getElementById('hub');
+const tripInput = document.getElementById('trip');
+const tripLabel = document.getElementById('tripLabel');
+const MANAGER_PASSWORD = "manager123";
+
+// Hide Trip Number if HUB is Events or SAS
+hubSelect.addEventListener('change', function() {
+    if(this.value === "Events" || this.value === "SAS") {
+        tripInput.style.display = 'none';
+        tripLabel.style.display = 'none';
+        tripInput.value = ""; // clear value
+    } else {
+        tripInput.style.display = 'block';
+        tripLabel.style.display = 'block';
+    }
+});
+
+// Handle form submission
+form.addEventListener('submit', function(event){
+    event.preventDefault();
+
+    const submission = {
+        date: document.getElementById('date').value,
+        name: document.getElementById('name').value,
+        corp: document.getElementById('corp').value,
+        hub: hubSelect.value,
+        unit: document.getElementById('unit').value,
+        shift: document.getElementById('shift').value,
+        trip: tripInput.value,
+        hours: document.getElementById('hours').value,
+        status: "Pending"
+    };
+
+    let submissions = JSON.parse(localStorage.getItem('lateCallSubmissions')) || [];
+    submissions.push(submission);
+    localStorage.setItem('lateCallSubmissions', JSON.stringify(submissions));
+
+    alert('Request submitted successfully!');
+    form.reset();
+    loadManagerTable();
+});
+
+// Manager login prompt
+function managerLogin() {
+    const password = prompt("Enter manager password:");
+    if(password === MANAGER_PASSWORD){
+        managerSection.style.display = 'block';
+        loadManagerTable();
+    } else {
+        alert("Access denied. Wrong password!");
+    }
+}
+
+// Load manager table with color-coded status
+function loadManagerTable() {
+    const tbody = document.getElementById('requestsTable').querySelector('tbody');
+    tbody.innerHTML = '';
+    let submissions = JSON.parse(localStorage.getItem('lateCallSubmissions')) || [];
+    submissions.forEach((sub, index) => {
+        let row = document.createElement('tr');
+
+        let statusButton = sub.status === "Pending" 
+            ? `<button class="status-pending" onclick="markCompleted(${index})">Pending</button>` 
+            : `<span class="status-completed">Completed</span>`;
+
+        row.innerHTML = `
+            <td>${sub.date}</td>
+            <td>${sub.name}</td>
+            <td>${sub.corp}</td>
+            <td>${sub.hub}</td>
+            <td>${sub.unit}</td>
+            <td>${sub.shift}</td>
+            <td>${sub.trip}</td>
+            <td>${sub.hours}</td>
+            <td>${statusButton}</td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Mark request as Completed
+function markCompleted(index) {
+    let submissions = JSON.parse(localStorage.getItem('lateCallSubmissions')) || [];
+    submissions[index].status = "Completed";
+    localStorage.setItem('lateCallSubmissions', JSON.stringify(submissions));
+    loadManagerTable();
+}
+</script>
+
+</body>
+</html>
